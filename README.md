@@ -72,3 +72,23 @@ Body: { "url": "https://..." } ou { "text": "alegação a checar" }
 POST /api/image-check
 Multipart/form-data, campo "image" (JPG/PNG, até 15MB)
 ```
+
+## Roadmap
+
+- [x] Fact-checking de texto e links
+- [x] Análise de imagem (EXIF + ELA)
+- [x] Análise de vídeo (frames + ELA)
+- [x] Interface web
+- [ ] Extração de claim via LLM para perguntas em linguagem natural (implementado, aguardando billing da API)
+- [ ] Reverse image search (encontrar onde mais a imagem já circulou)
+- [ ] Detecção de deepfake facial/voz via API especializada
+- [ ] Fallback com navegador headless (Puppeteer) para sites com conteúdo carregado via JavaScript
+- [ ] Expansão contínua da base de domínios curados
+
+## Aviso importante
+
+Essa ferramenta é um **apoio à checagem**, não um veredito absoluto. "Fake news" é um espectro — uma informação pode ser parcialmente verdadeira, desatualizada ou tirada de contexto sem ser tecnicamente falsa. A ausência de sinais de manipulação numa imagem não garante autenticidade; apenas indica ausência dos sinais que sabemos checar automaticamente.
+
+## Autor
+
+Desenvolvido por Lucas Roberto ([LRDev](https://github.com/) / NokkiaDev).
