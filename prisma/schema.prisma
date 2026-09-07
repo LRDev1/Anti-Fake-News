@@ -1,0 +1,91 @@
+// Schema pensado para suportar os 3 módulos: texto/link (fase 1),
+// imagem e vídeo (fases seguintes), todos convergindo no mesmo
+// modelo de "Check" com score agregado.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MediaType {
+  TEXT_LINK
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+enum Verdict {
+  CONFIAVEL
+  DUVIDOSO
+  FALSO
+  SEM_DADOS_SUFICIENTES
+}
+
+// Registro central de cada checagem feita, independente do tipo de mídia.
+// Isso é o que permite o front renderizar qualquer resultado com o mesmo componente.
+model Check {
+  id          String    @id @default(cuid())
+  mediaType   MediaType
+  inputUrl    String?   // link original, se houver
+  inputText   String?   // texto colado pelo usuário ou extraído do link
+  extractedClaim String? // claim central identificada pela IA, usada na busca
+  score       Int       // 0-100, score agregado de confiabilidade
+  verdict     Verdict
+  summary     String    // explicação gerada (LLM ou regras)
+  createdAt   DateTime  @default(now())
+
+  sourceCheck   SourceCredibilityResult?
+  factCheck     FactCheckMatch[]
+  mediaAnalysis MediaAnalysisResult?
+
+  @@index([inputUrl])
+  @@index([createdAt])
+}
+
+// Resultado da checagem de credibilidade do domínio/fonte
+model SourceCredibilityResult {
+  id          String   @id @default(cuid())
+  check       Check    @relation(fields: [checkId], references: [id])
+  checkId     String   @unique
+  domain      String
+  trustScore  Int      // 0-100, vindo da tabela DomainReputation
+  category    String?  // ex: "agência de notícias", "blog pessoal", "site satírico"
+}
+
+// Tabela curada de reputação de domínios (populada manualmente + fontes públicas
+// tipo Media Bias/Fact Check). Serve de cache para não reprocessar sempre.
+model DomainReputation {
+  id           String   @id @default(cuid())
+  domain       String   @unique
+  trustScore   Int      // 0-100
+  category     String?
+  notes        String?
+  updatedAt    DateTime @updatedAt
+}
+
+// Resultados batidos contra fact-checkers (Google Fact Check Tools API etc.)
+model FactCheckMatch {
+  id           String   @id @default(cuid())
+  check        Check    @relation(fields: [checkId], references: [id])
+  checkId      String
+  publisher    String   // ex: "Aos Fatos", "Lupa"
+  claimReviewed String
+  textualRating String  // ex: "Falso", "Enganoso", "Verdadeiro"
+  sourceUrl    String
+}
+
+// Resultado de análise de mídia (imagem/vídeo) - módulo futuro, schema já reservado
+model MediaAnalysisResult {
+  id              String   @id @default(cuid())
+  check           Check    @relation(fields: [checkId], references: [id])
+  checkId         String   @unique
+  hasExifEdit     Boolean?
+  reverseSearchHits Int?
+  elaAnomalyScore Int?     // 0-100, quanto maior mais suspeito
+  deepfakeScore   Int?     // 0-100, vindo de API externa (fase 2)
+  rawProviderData Json?
+}
